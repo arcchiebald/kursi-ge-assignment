@@ -4,6 +4,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.springframework.stereotype.Component;
+
+// We register the classes with Component decorator 
+// so we can use it for dependency injection and its called Spring Bean
+@Component 
 public class FundingAlgorithm {
 
     // We are using 0-1 Knapsack to solve this problem.
