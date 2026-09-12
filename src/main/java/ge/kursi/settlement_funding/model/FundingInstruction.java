@@ -2,25 +2,16 @@ package ge.kursi.settlement_funding.model;
 
 import jakarta.persistence.*;
 
-@Entity 
-@Table(
-    name = "funding_instructions",
-    uniqueConstraints = {
-        @UniqueConstraint(
-            name = "uq_funding_instructions_request_order",
-            columnNames = {"request_id", "instruction_order"}
-        )
-    },
-    indexes = {
-        @Index(
-            name = "idx_funding_instructions_request_selected_order",
-            columnList = "request_id, is_selected, instruction_order"
-        )
-    }
-)
+@Entity
+@Table(name = "funding_instructions", uniqueConstraints = {
+        @UniqueConstraint(name = "uq_funding_instructions_request_order", columnNames = { "request_id",
+                "instruction_order" })
+}, indexes = {
+        @Index(name = "idx_funding_instructions_request_selected_order", columnList = "request_id, is_selected, instruction_order")
+})
 public class FundingInstruction {
 
-    @Id 
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long id;
@@ -97,5 +88,14 @@ public class FundingInstruction {
 
     public void setInstructionOrder(Integer instructionOrder) {
         this.instructionOrder = instructionOrder;
+    }
+
+    public FundingInstruction(String instructionReference, Long instructionAmount, Long expectedFee,
+            Integer instructionOrder) {
+        this.instructionReference = instructionReference;
+        this.instructionAmount = instructionAmount;
+        this.expectedFee = expectedFee;
+        this.instructionOrder = instructionOrder;
+        this.selected = false;
     }
 }

@@ -7,17 +7,13 @@ import java.util.UUID;
 
 import jakarta.persistence.*;
 
-
-@Entity 
-@Table(
-    name = "funding_requests",
-    indexes = {
+@Entity
+@Table(name = "funding_requests", indexes = {
         @Index(name = "idx_funding_requests_created_at", columnList = "created_at")
-    }
-)
+})
 public class FundingRequest {
 
-    @Id 
+    @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "request_id")
     private UUID requestId;
@@ -33,15 +29,11 @@ public class FundingRequest {
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
-    
-    @OneToMany(
-        mappedBy = "request",
-        cascade = CascadeType.ALL,
-        orphanRemoval = true
-    )
+
+    @OneToMany(mappedBy = "request", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FundingInstruction> instructions = new ArrayList<>();
 
-    protected FundingRequest(){
+    protected FundingRequest() {
 
     }
 
@@ -96,6 +88,14 @@ public class FundingRequest {
     public void addInstruction(FundingInstruction instruction) {
         instructions.add(instruction);
         instruction.setRequest(this);
+    }
+
+    public FundingRequest(Long availableSettlementBalance,
+            OffsetDateTime createdAt) {
+        this.availableSettlementBalance = availableSettlementBalance;
+        this.totalSettlementConsumed = 0L;
+        this.totalExpectedFee = 0L;
+        this.createdAt = createdAt;
     }
 
 }
