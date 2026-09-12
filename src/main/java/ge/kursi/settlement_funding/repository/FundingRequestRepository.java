@@ -1,0 +1,10 @@
+package ge.kursi.settlement_funding.repository;
+
+import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import ge.kursi.settlement_funding.model.FundingRequest;
+
+public interface FundingRequestRepository extends JpaRepository<FundingRequest, UUID> {
+
+}
