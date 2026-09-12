@@ -106,7 +106,7 @@ public class FundingRequestService {
     @Transactional(readOnly = true)
     public FundingRequestResponse findById(UUID requestId) {
         FundingRequest fundingRequest = fundingRequestRepository.findById(requestId)
-                                        .orElseThrow(() -> new IllegalArgumentException(
+                                        .orElseThrow(() -> new FundingRequestNotFoundException(
                                             "Funding request not found: " + requestId
                                         ));
 
