@@ -1,0 +1,72 @@
+{
+  "info": {
+    "name": "Settlement Funding API (V1)",
+    "_postman_id": "settlement-funding-api",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "requestId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Fund Settlement",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"availableSettlementBalance\": 20000,\n  \"candidateInstructions\": [\n    {\n      \"instructionReference\": \"INS-2001\",\n      \"instructionAmount\": 7000,\n      \"expectedFee\": 150\n    },\n    {\n      \"instructionReference\": \"INS-2002\",\n      \"instructionAmount\": 9000,\n      \"expectedFee\": 210\n    },\n    {\n      \"instructionReference\": \"INS-2003\",\n      \"instructionAmount\": 4000,\n      \"expectedFee\": 90\n    },\n    {\n      \"instructionReference\": \"INS-2004\",\n      \"instructionAmount\": 6000,\n      \"expectedFee\": 130\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/settlement/fund",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "settlement", "fund"]
+        }
+      }
+    },
+    {
+      "name": "Get Funding Request",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/settlement/{{requestId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "settlement", "{{requestId}}"]
+        }
+      }
+    },
+    {
+      "name": "List Funding Requests",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/settlement?page=0&size=20",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "settlement"],
+          "query": [
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "size",
+              "value": "20"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
