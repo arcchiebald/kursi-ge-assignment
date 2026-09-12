@@ -3,6 +3,7 @@ package ge.kursi.settlement_funding.algorithm;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 
@@ -59,11 +60,9 @@ class FundingAlgorithmTest {
         long[] values = {150, 210};
         long capacity = 5;
 
-        try {
-            algorithm.solve(weights, values, capacity);
-        } catch (IllegalArgumentException e) {
-            assertEquals("Weights and values must be non-null, have equal length, and capacity must be non-negative.", e.getMessage());
-        }
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> algorithm.solve(weights, values, capacity));
+        assertEquals("Weights and values must be non-null, have equal length, and capacity must be non-negative.", exception.getMessage());
     }
 
     @Test
@@ -72,11 +71,9 @@ class FundingAlgorithmTest {
         long[] values = {100};
         long capacity = 5;
 
-        try {
-            algorithm.solve(weights, values, capacity);
-        } catch (IllegalArgumentException e) {
-            assertEquals("Weights and values must be non-null, have equal length, and capacity must be non-negative.", e.getMessage());
-        }
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> algorithm.solve(weights, values, capacity));
+        assertEquals("Weights and values must be non-null, have equal length, and capacity must be non-negative.", exception.getMessage());
     }
 
     @Test
@@ -85,11 +82,9 @@ class FundingAlgorithmTest {
         long[] values = {100, 150};
         long capacity = -1;
 
-        try {
-            algorithm.solve(weights, values, capacity);
-        } catch (IllegalArgumentException e) {
-            assertEquals("Weights and values must be non-null, have equal length, and capacity must be non-negative.", e.getMessage());
-        }
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> algorithm.solve(weights, values, capacity));
+        assertEquals("Weights and values must be non-null, have equal length, and capacity must be non-negative.", exception.getMessage());
     }
 
     @Test 
