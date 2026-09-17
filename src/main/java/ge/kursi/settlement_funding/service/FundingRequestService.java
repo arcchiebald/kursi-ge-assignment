@@ -17,16 +17,19 @@ import ge.kursi.settlement_funding.dto.SettlementInstructionRequest;
 import ge.kursi.settlement_funding.dto.SettlementRequest;
 import ge.kursi.settlement_funding.model.FundingInstruction;
 import ge.kursi.settlement_funding.model.FundingRequest;
+import ge.kursi.settlement_funding.repository.FundingInstructionRepository;
 import ge.kursi.settlement_funding.repository.FundingRequestRepository;
 
 @Service
 public class FundingRequestService {
 
+    private final FundingInstructionRepository fundingInstructionRepository;
     private final FundingRequestRepository fundingRequestRepository;
     private final FundingAlgorithm fundingAlgorithm;
 
-    public FundingRequestService(FundingRequestRepository fundingRequestRepository, FundingAlgorithm fundingAlgorithm) {
+    public FundingRequestService(FundingRequestRepository fundingRequestRepository, FundingAlgorithm fundingAlgorithm, FundingInstructionRepository fundingInstructionRepository) {
         this.fundingRequestRepository = fundingRequestRepository;
+        this.fundingInstructionRepository = fundingInstructionRepository;
         this.fundingAlgorithm = fundingAlgorithm;
     }
 
@@ -85,6 +88,43 @@ public class FundingRequestService {
         fundingRequest.setTotalExpectedFee(totalExpectedFee);
 
         FundingRequest savedFundingRequest = fundingRequestRepository.save(fundingRequest);
+
+        // find instructions which are false but in range of amount which is left out
+
+        List<FundingInstruction> notSelecteFundingInstructions = fundingInstructionRepository.findBySelected(false);
+
+        // add those instructions to this fundinqrequest(change uuid fkey reference to current one and selected=true)
+
+        long remainingSettlementConsumed = availableBalance - totalSettlementConsumed;
+
+        int discardedLength = notSelecteFundingInstructions.size();
+
+        long[] discardedAmounts = new long[discardedLength];
+        long[] discardedFees = new long[discardedLength];
+
+        for (int i = 0; i < discardedLength; i++) {
+            FundingInstruction current = notSelecteFundingInstructions.get(i);
+
+            discardedAmounts[i] = current.getInstructionAmount();
+            discardedFees[i] = current.getExpectedFee();
+            current.setInstructionOrder(i);
+
+        }
+
+        List<Integer> selectedDiscardedIndices = fundingAlgorithm.solve(discardedAmounts, discardedFees, remainingSettlementConsumed);
+
+        for (Integer discardedIndex : selectedDiscardedIndices) {
+            FundingInstruction discardedInstruction = notSelecteFundingInstructions.get(discardedIndex);
+
+            discardedInstruction.setSelected(true);
+            savedFundingRequest.addInstruction(discardedInstruction);
+
+            totalSettlementConsumed += discardedInstruction.getInstructionAmount();
+            totalExpectedFee += discardedInstruction.getExpectedFee();
+        }
+
+        savedFundingRequest.setTotalSettlementConsumed(totalSettlementConsumed);
+        savedFundingRequest.setTotalExpectedFee(totalExpectedFee);
 
         // Convert all instructions to responses in order to use them in nested FundingRequestResponse
         List<FundingInstructionResponse> selectedInstructions = 

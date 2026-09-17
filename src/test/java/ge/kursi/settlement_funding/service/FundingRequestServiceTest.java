@@ -2,8 +2,11 @@ package ge.kursi.settlement_funding.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -26,6 +29,7 @@ import ge.kursi.settlement_funding.dto.SettlementInstructionRequest;
 import ge.kursi.settlement_funding.dto.SettlementRequest;
 import ge.kursi.settlement_funding.model.FundingInstruction;
 import ge.kursi.settlement_funding.model.FundingRequest;
+import ge.kursi.settlement_funding.repository.FundingInstructionRepository;
 import ge.kursi.settlement_funding.repository.FundingRequestRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,11 +41,14 @@ class FundingRequestServiceTest {
     @Mock
     private FundingAlgorithm fundingAlgorithm;
 
+    @Mock
+    private FundingInstructionRepository fundingInstructionRepository;
+
     private FundingRequestService service;
 
     @BeforeEach
     void setUp() {
-        service = new FundingRequestService(fundingRequestRepository, fundingAlgorithm);
+        service = new FundingRequestService(fundingRequestRepository, fundingAlgorithm, fundingInstructionRepository);
     }
 
     @Test
@@ -55,8 +62,13 @@ class FundingRequestServiceTest {
                 )
         );
 
-        when(fundingAlgorithm.solve(any(long[].class), any(long[].class), anyLong()))
+        // Phase 1 (this request's own candidates) selects indices 0 and 2
+        when(fundingAlgorithm.solve(argThat(amounts -> amounts != null && amounts.length == 3), any(long[].class), anyLong()))
                 .thenReturn(List.of(0, 2));
+        // Phase 2 (previously discarded instructions) has nothing to carry forward
+        when(fundingInstructionRepository.findBySelected(false)).thenReturn(List.of());
+        when(fundingAlgorithm.solve(argThat(amounts -> amounts != null && amounts.length == 0), any(long[].class), anyLong()))
+                .thenReturn(List.of());
         when(fundingRequestRepository.save(any(FundingRequest.class)))
                 .thenAnswer(invocation -> {
                     FundingRequest saved = invocation.getArgument(0);
@@ -75,6 +87,47 @@ class FundingRequestServiceTest {
     }
 
     @Test
+    void fundCarriesForwardPreviouslyDiscardedInstructionsUsingRemainingBalance() {
+        SettlementRequest request = new SettlementRequest(
+                20_000L,
+                List.of(new SettlementInstructionRequest("INS-1", 5_000L, 100L))
+        );
+
+        FundingInstruction oldRejected = new FundingInstruction("OLD-1", 6_000L, 80L, 5);
+        FundingInstruction oldWinner = new FundingInstruction("OLD-2", 9_000L, 200L, 7);
+
+        // Phase 1 selects this request's only candidate (index 0)
+        when(fundingAlgorithm.solve(argThat(amounts -> amounts != null && amounts.length == 1), any(long[].class), anyLong()))
+                .thenReturn(List.of(0));
+        // Two instructions discarded by earlier requests are still pending
+        when(fundingInstructionRepository.findBySelected(false))
+                .thenReturn(List.of(oldRejected, oldWinner));
+        // Phase 2, against the remaining balance, picks only the second pending instruction (index 1)
+        when(fundingAlgorithm.solve(argThat(amounts -> amounts != null && amounts.length == 2), any(long[].class), eq(15_000L)))
+                .thenReturn(List.of(1));
+        when(fundingRequestRepository.save(any(FundingRequest.class)))
+                .thenAnswer(invocation -> {
+                    FundingRequest saved = invocation.getArgument(0);
+                    saved.setRequestId(UUID.randomUUID());
+                    return saved;
+                });
+
+        FundingRequestResponse response = service.fund(request);
+
+        List<String> selectedRefs = response.selectedInstructions().stream()
+                .map(instruction -> instruction.instructionReference())
+                .toList();
+
+        assertEquals(2, response.selectedInstructions().size());
+        assertTrue(selectedRefs.contains("INS-1"));
+        assertTrue(selectedRefs.contains("OLD-2"));
+        assertEquals(14_000L, response.totalSettlementConsumed());
+        assertEquals(300L, response.totalExpectedFee());
+        assertTrue(oldWinner.isSelected());
+        assertEquals(response.requestId(), oldWinner.getRequest().getRequestId());
+    }
+
+    @Test
     void fundReturnsEmptySelectionAndZeroTotalsWhenNothingFits() {
         SettlementRequest request = new SettlementRequest(
                 3_000L,
@@ -83,6 +136,7 @@ class FundingRequestServiceTest {
 
         when(fundingAlgorithm.solve(any(long[].class), any(long[].class), anyLong()))
                 .thenReturn(List.of());
+        when(fundingInstructionRepository.findBySelected(false)).thenReturn(List.of());
         when(fundingRequestRepository.save(any(FundingRequest.class)))
                 .thenAnswer(invocation -> {
                     FundingRequest saved = invocation.getArgument(0);
